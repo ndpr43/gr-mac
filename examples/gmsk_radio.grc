@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='ASCII'?>
 <flow_graph>
-  <timestamp>Fri Mar 28 16:16:31 2014</timestamp>
+  <timestamp>Thu Aug  7 20:31:46 2014</timestamp>
   <block>
     <key>options</key>
     <param>
@@ -763,45 +763,6 @@
     </param>
   </block>
   <block>
-    <key>pad_sink</key>
-    <param>
-      <key>id</key>
-      <value>pad_sink_1</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>label</key>
-      <value>bb_rx</value>
-    </param>
-    <param>
-      <key>type</key>
-      <value>complex</value>
-    </param>
-    <param>
-      <key>vlen</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>num_streams</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>optional</key>
-      <value>True</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(516, 139)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
     <key>parameter</key>
     <param>
       <key>id</key>
@@ -1427,10 +1388,6 @@
       <value>length</value>
     </param>
     <param>
-      <key>sleep_duration</key>
-      <value>1</value>
-    </param>
-    <param>
       <key>affinity</key>
       <value></value>
     </param>
@@ -1445,57 +1402,6 @@
     <param>
       <key>_coordinate</key>
       <value>(815, 262)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
-    <key>foo_packet_pad</key>
-    <param>
-      <key>id</key>
-      <value>foo_packet_pad_0</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>debug</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>delay</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>delay_sec</key>
-      <value>0.001</value>
-    </param>
-    <param>
-      <key>pad_front</key>
-      <value>16*0</value>
-    </param>
-    <param>
-      <key>pad_tail</key>
-      <value>16</value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(835, 379)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2256,45 +2162,6 @@
     </param>
   </block>
   <block>
-    <key>foo_burst_tagger</key>
-    <param>
-      <key>id</key>
-      <value>foo_burst_tagger_0</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>tag_name</key>
-      <value>pmt.intern("length")</value>
-    </param>
-    <param>
-      <key>mult</key>
-      <value>samps_per_sym * 8</value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(605, 390)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-  </block>
-  <block>
     <key>mac_burst_tagger</key>
     <param>
       <key>id</key>
@@ -2494,6 +2361,45 @@
       <value>0</value>
     </param>
   </block>
+  <block>
+    <key>pad_sink</key>
+    <param>
+      <key>id</key>
+      <value>pad_sink_1</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value>bb_rx</value>
+    </param>
+    <param>
+      <key>type</key>
+      <value>complex</value>
+    </param>
+    <param>
+      <key>vlen</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>num_streams</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>optional</key>
+      <value>True</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(510, 179)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+  </block>
   <connection>
     <source_block_id>uhd_usrp_source_0</source_block_id>
     <sink_block_id>digital_gmsk_demod_0</sink_block_id>
@@ -2507,32 +2413,8 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>foo_burst_tagger_0</source_block_id>
-    <sink_block_id>foo_packet_pad_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>foo_packet_pad_0</source_block_id>
-    <sink_block_id>pad_sink_2</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>foo_packet_pad_0</source_block_id>
-    <sink_block_id>uhd_usrp_sink_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
     <source_block_id>digital_gmsk_mod_0</source_block_id>
     <sink_block_id>blocks_multiply_const_vxx_0</sink_block_id>
-    <source_key>0</source_key>
-    <sink_key>0</sink_key>
-  </connection>
-  <connection>
-    <source_block_id>blocks_multiply_const_vxx_0</source_block_id>
-    <sink_block_id>foo_burst_tagger_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
