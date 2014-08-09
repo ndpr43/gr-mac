@@ -64,7 +64,7 @@ class simple_mac(gr.basic_block):
             out_sig=None)
         
         self.lock = threading.RLock()
-        self.debug_stderr = False
+        self.debug_stderr = True
         
         self.addr = addr                                #MAC's address
         
@@ -328,7 +328,7 @@ class simple_mac(gr.basic_block):
                         if ((pkt_cnt + 1) % 256) != self.arq_expected_sequence_number:
                             print "Discarding out-of-sequence data: %03d (expected: %03d)" % (pkt_cnt, self.arq_expected_sequence_number)
                             if self.debug_stderr: sys.stderr.write("[%.6f] ==> Discarding OoS data %03d (expected: %03d)\n" % (time.time(), pkt_cnt, self.arq_expected_sequence_number))
-                        discard = True
+                        #discard = True
                     self.arq_expected_sequence_number =  (pkt_cnt + 1) % 256
                 
                 elif not incoming_protocol_id in [BROADCAST_PROTOCOL_ID]:
@@ -417,6 +417,14 @@ class simple_mac(gr.basic_block):
     
     def dispatch_app_rx(self, data, meta_dict):
         #double check to make sure correct meta data was in PDU
+        if (not 'EM_USE_ARQ' in meta_dict.keys()):
+            print "Missing EM_USE_ARQ"
+        
+        if (not 'EM_DEST_ADDR' in meta_dict.keys()):
+            print "Missing EM_DEST_ADDR"
+
+
+
         if (not 'EM_USE_ARQ' in meta_dict.keys()) or (not 'EM_DEST_ADDR' in meta_dict.keys()):
             #raise NameError("EM_USE_ARQ and/or EM_DEST_ADDR not specified in PDU")
             print "PDU missing MAC metadata"
