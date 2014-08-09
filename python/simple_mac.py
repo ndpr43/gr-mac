@@ -233,6 +233,13 @@ class simple_mac(gr.basic_block):
         meta = pmt.to_pmt(pdu_tuple[1])
         
         self.message_port_pub(pmt.intern('to_app'), pmt.cons(meta,data))
+   
+ 
+    def output_link_failure(self, dest):
+        data = []        
+        data = pmt.init_u8vector(len(data), data)
+        meta = pmt.to_pmt({'EM_UNREACHABLE_DEST_ADDR':dest})
+        self.message_port_pub(pmt.intern('to_app'), pmt.cons(meta,data))
     
     
     def check_nodes(self):
@@ -485,6 +492,8 @@ class simple_mac(gr.basic_block):
                     self.arq_channel_state = ARQ_CHANNEL_IDLE
                     self.failed_arq += 1
                     self.pkt_cnt_arq = ( self.pkt_cnt_arq + 1 ) % 256   # start on next pkt
+                    # Our function here
+                    self.output_link_failure(dest)
                     if self.expire_on_arq_failure:
                         if dest in self.nodes.keys():
                             node = self.nodes[dest]
@@ -492,6 +501,7 @@ class simple_mac(gr.basic_block):
                             print "Expired node %03d after ARQ retry failure" % (dest)
                         else:
                             print "ARQ retry failed to destination not in node map: %03d" % (dest)
+          
                 else:
                     self.retries += 1
                     time_now = time.time()
