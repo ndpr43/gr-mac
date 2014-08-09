@@ -88,6 +88,8 @@ class simple_mac(gr.basic_block):
         self.exp_backoff = exp_backoff
         self.backoff_randomness = backoff_randomness
         self.next_random_backoff_percentage = 0.0
+
+        self.backoff_tx = 0.0
         
         self.queue = Queue.Queue()                        #queue for msg destined for ARQ path
         
@@ -345,6 +347,12 @@ class simple_mac(gr.basic_block):
                 if incoming_protocol_id == ARQ_PROTOCOL_ID:
                     if len(data) > PKT_INDEX_MAX:
                         rx_ack = data[5]
+
+                        # Register the time of reception of ACK
+                        self.time_of_tx = time.time() 
+                        # Backing off from performing immediate Transmission
+                        self.backoff_tx *= (1.0 + self.next_random_backoff_percentage)
+
                         if self.arq_channel_state == ARQ_CHANNEL_IDLE:
                             print "Received ACK while idle: %03d" % (rx_ack)
                             if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d while idle\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
@@ -476,14 +484,15 @@ class simple_mac(gr.basic_block):
         if self.arq_channel_state == ARQ_CHANNEL_IDLE: #channel ready for next arq msg
             if not self.queue.empty(): #we have an arq msg to send, so lets send it
                 #print self.queue.qsize()
-                self.arq_pdu_tuple = self.queue.get() # get msg
-                self.expected_arq_id = self.pkt_cnt_arq # store it for re-use
-                self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
-                self.time_of_tx = time.time() # note time for arq timeout recognition
-                self.arq_channel_state = ARQ_CHANNEL_BUSY # remember that the channel is busy
-                self.arq_pkts_txed += 1
-                self.retries = 0
-                self.next_random_backoff_percentage = self.backoff_randomness * random.random()
+                if (time.time() - self.time_of_tx) > self.backoff_tx:
+                    self.arq_pdu_tuple = self.queue.get() # get msg
+                    self.expected_arq_id = self.pkt_cnt_arq # store it for re-use
+                    self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
+                    self.time_of_tx = time.time() # note time for arq timeout recognition
+                    self.arq_channel_state = ARQ_CHANNEL_BUSY # remember that the channel is busy
+                    self.arq_pkts_txed += 1
+                    self.retries = 0
+                    self.next_random_backoff_percentage = self.backoff_randomness * random.random()
         else: # if channel is busy, lets check to see if its time to re-transmit
             if self.exp_backoff:
                 backedoff_timeout = self.timeout * (2**self.retries)
@@ -519,5 +528,6 @@ class simple_mac(gr.basic_block):
                     self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
                     if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
                     self.time_of_tx = time_now
+		    self.backoff_tx = backedoff_timeout
                     self.next_random_backoff_percentage = self.backoff_randomness * random.random()
                     self.arq_retxed += 1
