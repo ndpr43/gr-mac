@@ -66,31 +66,35 @@ class simple_mac(gr.basic_block):
         self.lock = threading.RLock()
         self.debug_stderr = True
         
-        self.addr = addr                                #MAC's address
+        self.addr = addr                                 #MAC's address
         
-        self.pkt_cnt_arq = 0                            #pkt_cnt for arq channel
-        self.pkt_cnt_no_arq = 0                            #pkt_cnt for non_arq channel
+        self.pkt_cnt_arq = 0                             #pkt_cnt for arq channel
+        self.pkt_cnt_no_arq = 0                          #pkt_cnt for non_arq channel
         
         self.arq_expected_sequence_number = 0            #keep track for sequence error detection
-        self.no_arq_expected_sequence_number = 0        #keep track for sequence error detection
+        self.no_arq_expected_sequence_number = 0         #keep track for sequence error detection
         
-        self.arq_sequence_error_cnt = 0                    #arq channel seq errors - VERY BAD
-        self.no_arq_sequence_error_cnt = 0                #non-arq channel seq error count
-        self.arq_pkts_txed = 0                            #how many arq packets we've transmitted
-        self.arq_retxed = 0                                #how many times we've retransmitted
+        self.arq_sequence_error_cnt = 0                  #arq channel seq errors - VERY BAD
+        self.no_arq_sequence_error_cnt = 0               #non-arq channel seq error count
+        self.arq_pkts_txed = 0                           #how many arq packets we've transmitted
+        self.arq_retxed = 0                              #how many times we've retransmitted
         self.failed_arq = 0
         self.max_attempts = max_attempts
         
         self.arq_channel_state = ARQ_CHANNEL_IDLE
         self.expected_arq_id = -1                        #arq id we're expected to get ack for      
-        self.timeout = timeout                            #arq timeout parameter
+        self.timeout = timeout                           #arq timeout parameter
         self.time_of_tx = 0.0                            #time of last arq transmission
         self.exp_backoff = exp_backoff
         self.backoff_randomness = backoff_randomness
-        self.next_random_backoff_percentage = 0.0
 
-        self.backoff_tx = 0.0
-        
+	# Timers for handling channel contention
+	self.ack_timer = 0.0                             # ACK timeout timer
+	self.reTx_timer = 0.0                            # Retransmission timeout timer
+	self.newTx_timer = 0.0                           # Backoff timer for new transmission
+
+	self.packet_duration = 0.005                     # Data packet duration. Default value set to 5ms
+
         self.queue = Queue.Queue()                        #queue for msg destined for ARQ path
         
         self.last_tx_time = None
@@ -352,13 +356,13 @@ class simple_mac(gr.basic_block):
                         # Register the time of reception of ACK
                         self.time_of_tx = time.time() 
                         # Backing off from performing immediate Transmission
-                        #self.backoff_tx *= (2.0 + self.next_random_backoff_percentage)
 
                         if self.arq_channel_state == ARQ_CHANNEL_IDLE:
                             print "Received ACK while idle: %03d" % (rx_ack)
                             #if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d while idle\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
                         elif rx_ack == self.expected_arq_id: # 1st byte into payload
                             self.arq_channel_state = ARQ_CHANNEL_IDLE
+			    self.newTx_timer = time.time() + self.packet_duration + self.timeout     #Registering the time stamp of ACK received.
                             self.pkt_cnt_arq = (self.pkt_cnt_arq + 1) % 256
                             diff = time.time() - self.time_of_tx
                             #print "==> ACK took %f sec" % (diff)
@@ -366,6 +370,7 @@ class simple_mac(gr.basic_block):
                         else:
                             if ((rx_ack + 1) % 256) != self.expected_arq_id:
                                 print "Received out-of-sequence ACK: %03d (expected: %03d)" % (rx_ack, self.expected_arq_id)
+				self.newTx_timer = time.time() + self.packet_duration + self.timeout # remove once seq. no. is fixed
                             #if self.debug_stderr: sys.stderr.write("[%.6f] ==> OoS ACK %03d (expected: %03d)\n" % (time.time(), rx_ack, self.expected_arq_id))
                     else:
                         print "ARQ protocol packet too short"
@@ -486,57 +491,54 @@ class simple_mac(gr.basic_block):
         if self.arq_channel_state == ARQ_CHANNEL_IDLE: #channel ready for next arq msg
             if not self.queue.empty(): #we have an arq msg to send, so lets send it
                 #print self.queue.qsize()
-                if (time.time() - self.time_of_tx) > self.backoff_tx:
-                    self.arq_pdu_tuple = self.queue.get() # get msg
-                    self.expected_arq_id = self.pkt_cnt_arq # store it for re-use
-                    self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
-                    self.time_of_tx = time.time() # note time for arq timeout recognition
-                    self.arq_channel_state = ARQ_CHANNEL_BUSY # remember that the channel is busy
+                if time.time() > self.newTx_timer:
+                    self.arq_pdu_tuple = self.queue.get()                # get msg
+                    self.expected_arq_id = self.pkt_cnt_arq              # store it for re-use
+                    self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID) # transmit the PDU tuple
+                    self.time_of_tx = time.time()                        # note time for arq timeout recognition
+		    self.ack_timer = self.time_of_tx + self.timeout      # set the ACK timeout for the new Transmission
+                    self.arq_channel_state = ARQ_CHANNEL_BUSY            # remember that the channel is busy
                     self.arq_pkts_txed += 1
                     self.retries = 0
-                    self.next_random_backoff_percentage = self.backoff_randomness * random.random()
                     backedoff_timeout = self.timeout
-        else: # if channel is busy, lets check to see if its time to re-transmit
-            #if self.exp_backoff:
-            #    backedoff_timeout = self.timeout * (2**self.retries)
-            #else:
-            #    backedoff_timeout = self.timeout * (self.retries + 1)
-            #    #backedoff_timeout = self.timeout * (self.retries + 1)
-            #backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
+        else: # if channel is busy, lets check to see if its time to wait of ACK or to initiate re-transmission
+	    if time.time() > self.ack_timer:
+               print "Waiting of ACK timeout"
+	    else:
+	        # Select randomly an integer between 1 and retry times backoff window.
+	        # Add 1 to the sum. ( time.time() > (self.time_tx + self.timeout + ( reTx_timer ) * self.timeout)
+	        #                                                  |<-- ACK --->|  |<---------- reTx ---------->| 
+	        # Simplifying =>    ( time.time() - self.time_tx > (self.timeout * ( 1 + reTx_timer)))
+	        self.reTx_timer = (random.randint(1, self.backoff_randomness * self.retries) + 1) * self.timeout
 
-            #backedoff_timeout =  self.timeout + max(0,(random.random() * (self.backoff_randomness - len(self.nodes) - self.retries)) * self.timeout) 
-            backedoff_timeout =  ((self.retries + 1) * self.timeout) 
-
-            if (time.time() - self.time_of_tx) > backedoff_timeout: # check for ack timeout
-                #data = self.arq_pdu_tuple[0]
-                dest = self.arq_pdu_tuple[1]['EM_DEST_ADDR']
-                if self.retries == self.max_attempts:            # know when to quit
-                    print "[Addr: %03d ID: %03d] ARQ failed after %d attempts" % (dest, self.expected_arq_id, self.retries)
-                    #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ failed after %d attempts\n" % (time.time(), self.expected_arq_id, self.retries))
-                    self.retries = 0
-                    self.arq_channel_state = ARQ_CHANNEL_IDLE
-                    self.failed_arq += 1
-                    self.pkt_cnt_arq = ( self.pkt_cnt_arq + 1 ) % 256   # start on next pkt
-                    # Our function here
-                    #self.output_link_failure(dest)
-                    if self.expire_on_arq_failure:
-                        if dest in self.nodes.keys():
-                            node = self.nodes[dest]
-                            node.expire()
-                            print "Expired node %03d after ARQ retry failure" % (dest)
-                        else:
-                            print "ARQ retry failed to destination not in node map: %03d" % (dest)
+                if (time.time() - self.time_of_tx) > self.reTx_timer: # check for ack timeout
+                    #data = self.arq_pdu_tuple[0]
+                    dest = self.arq_pdu_tuple[1]['EM_DEST_ADDR']
+                    if self.retries == self.max_attempts:            # know when to quit
+                        print "[Addr: %03d ID: %03d] ARQ failed after %d attempts" % (dest, self.expected_arq_id, self.retries)
+                        #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ failed after %d attempts\n" % (time.time(), self.expected_arq_id, self.retries))
+                        self.retries = 0
+                        self.arq_channel_state = ARQ_CHANNEL_IDLE
+                        self.failed_arq += 1
+                        self.pkt_cnt_arq = ( self.pkt_cnt_arq + 1 ) % 256   # start on next pkt
+                        # Our function here
+                        #self.output_link_failure(dest)
+                        if self.expire_on_arq_failure:
+                            if dest in self.nodes.keys():
+                                node = self.nodes[dest]
+                                node.expire()
+                                print "Expired node %03d after ARQ retry failure" % (dest)
+                            else:
+                                print "ARQ retry failed to destination not in node map: %03d" % (dest)
           
-                else:
-                    self.retries += 1
-                    #time_now = time.time()
-                    #print "[Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d" % (dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries)
-                    sys.stderr.write(".")
-                    sys.stderr.flush()
-                    self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
-                    time_now = time.time()
-                    #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
-                    self.time_of_tx = time_now
-		    self.backoff_tx = backedoff_timeout
-                    self.next_random_backoff_percentage = self.backoff_randomness * random.random()
-                    self.arq_retxed += 1
+                    else:
+                        self.retries += 1
+                        #print "[Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d" % (dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries)
+                        sys.stderr.write(".")
+                        sys.stderr.flush()
+                        self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
+                        time_now = time.time()
+	                self.ack_timer = time_now + self.timeout
+                        #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
+                        self.time_of_tx = time_now
+                        self.arq_retxed += 1
