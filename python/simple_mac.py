@@ -352,7 +352,7 @@ class simple_mac(gr.basic_block):
                         # Register the time of reception of ACK
                         self.time_of_tx = time.time() 
                         # Backing off from performing immediate Transmission
-                        self.backoff_tx *= (2.0 + self.next_random_backoff_percentage)
+                        #self.backoff_tx *= (2.0 + self.next_random_backoff_percentage)
 
                         if self.arq_channel_state == ARQ_CHANNEL_IDLE:
                             print "Received ACK while idle: %03d" % (rx_ack)
@@ -504,7 +504,8 @@ class simple_mac(gr.basic_block):
             #    #backedoff_timeout = self.timeout * (self.retries + 1)
             #backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
 
-            backedoff_timeout =  self.timeout + max(0,(random.random() * (self.backoff_randomness - len(self.nodes) - self.retries)) * self.timeout) 
+            #backedoff_timeout =  self.timeout + max(0,(random.random() * (self.backoff_randomness - len(self.nodes) - self.retries)) * self.timeout) 
+            backedoff_timeout =  ((self.retries + 1) * self.timeout) 
 
             if (time.time() - self.time_of_tx) > backedoff_timeout: # check for ack timeout
                 #data = self.arq_pdu_tuple[0]
@@ -517,7 +518,7 @@ class simple_mac(gr.basic_block):
                     self.failed_arq += 1
                     self.pkt_cnt_arq = ( self.pkt_cnt_arq + 1 ) % 256   # start on next pkt
                     # Our function here
-                    self.output_link_failure(dest)
+                    #self.output_link_failure(dest)
                     if self.expire_on_arq_failure:
                         if dest in self.nodes.keys():
                             node = self.nodes[dest]
