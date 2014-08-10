@@ -352,7 +352,7 @@ class simple_mac(gr.basic_block):
                         # Register the time of reception of ACK
                         self.time_of_tx = time.time() 
                         # Backing off from performing immediate Transmission
-                        self.backoff_tx *= (1.0 + self.next_random_backoff_percentage)
+                        self.backoff_tx *= (2.0 + self.next_random_backoff_percentage)
 
                         if self.arq_channel_state == ARQ_CHANNEL_IDLE:
                             print "Received ACK while idle: %03d" % (rx_ack)
@@ -482,6 +482,7 @@ class simple_mac(gr.basic_block):
     
     def run_arq_fsm(self):
         # check to see if we have any outgoing messages from arq buffer we should send or pending re-transmissions
+        #print "ARQ State = %0d"%(self.arq_channel_state)
         if self.arq_channel_state == ARQ_CHANNEL_IDLE: #channel ready for next arq msg
             if not self.queue.empty(): #we have an arq msg to send, so lets send it
                 #print self.queue.qsize()
@@ -502,7 +503,9 @@ class simple_mac(gr.basic_block):
             #    backedoff_timeout = self.timeout * (self.retries + 1)
             #    #backedoff_timeout = self.timeout * (self.retries + 1)
             #backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
-            backedoff_timeout = (2 * backedoff_timeout) + (random.random() * self.backoff_randomness)
+
+            backedoff_timeout =  self.timeout + (random.random() * (self.backoff_randomness - len(self.nodes)) * self.timeout)
+
             if (time.time() - self.time_of_tx) > backedoff_timeout: # check for ack timeout
                 #data = self.arq_pdu_tuple[0]
                 dest = self.arq_pdu_tuple[1]['EM_DEST_ADDR']
