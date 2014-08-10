@@ -101,6 +101,7 @@ class simple_mac(gr.basic_block):
         self.only_send_if_alive = only_send_if_alive
         
         self.prepend_dummy = prepend_dummy
+        random.seed(time.time())
         
         #message i/o for radio interface
         self.message_port_register_out(pmt.intern('to_radio'))
@@ -160,7 +161,7 @@ class simple_mac(gr.basic_block):
        meta_dict = {'EM_DEST_ADDR': ack_addr}
        pdu_tuple = (data, meta_dict)
        self.tx_no_arq(pdu_tuple, ARQ_PROTOCOL_ID)
-       if self.debug_stderr: sys.stderr.write("[%.6f] ==> Sent ACK %03d to %03d\n" % (time.time(), ack_pkt_cnt, ack_addr))
+       #if self.debug_stderr: sys.stderr.write("[%.6f] ==> Sent ACK %03d to %03d\n" % (time.time(), ack_pkt_cnt, ack_addr))
     
     
     #transmit data through non-arq path    
@@ -329,7 +330,7 @@ class simple_mac(gr.basic_block):
                         self.arq_sequence_error_cnt += 1
                         if ((pkt_cnt + 1) % 256) != self.arq_expected_sequence_number:
                             print "Discarding out-of-sequence data: %03d (expected: %03d)" % (pkt_cnt, self.arq_expected_sequence_number)
-                            if self.debug_stderr: sys.stderr.write("[%.6f] ==> Discarding OoS data %03d (expected: %03d)\n" % (time.time(), pkt_cnt, self.arq_expected_sequence_number))
+                            #if self.debug_stderr: sys.stderr.write("[%.6f] ==> Discarding OoS data %03d (expected: %03d)\n" % (time.time(), pkt_cnt, self.arq_expected_sequence_number))
                         #discard = True
                     self.arq_expected_sequence_number =  (pkt_cnt + 1) % 256
                 
@@ -340,7 +341,7 @@ class simple_mac(gr.basic_block):
                             pass
                         else:
                             print "Out-of-sequence data: %03d (expected: %03d, protocol: %d)" % (pkt_cnt, self.no_arq_expected_sequence_number, incoming_protocol_id)
-                        if self.debug_stderr: sys.stderr.write("[%.6f] ==> OoS data %03d (expected: %03d, protocol: %d)\n" % (time.time(), pkt_cnt, self.no_arq_expected_sequence_number, incoming_protocol_id))
+                        #if self.debug_stderr: sys.stderr.write("[%.6f] ==> OoS data %03d (expected: %03d, protocol: %d)\n" % (time.time(), pkt_cnt, self.no_arq_expected_sequence_number, incoming_protocol_id))
                     self.no_arq_expected_sequence_number = (pkt_cnt + 1) % 256
                 
                 # check to see if this is an ACK packet
@@ -355,17 +356,17 @@ class simple_mac(gr.basic_block):
 
                         if self.arq_channel_state == ARQ_CHANNEL_IDLE:
                             print "Received ACK while idle: %03d" % (rx_ack)
-                            if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d while idle\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
+                            #if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d while idle\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
                         elif rx_ack == self.expected_arq_id: # 1st byte into payload
                             self.arq_channel_state = ARQ_CHANNEL_IDLE
                             self.pkt_cnt_arq = (self.pkt_cnt_arq + 1) % 256
                             diff = time.time() - self.time_of_tx
                             #print "==> ACK took %f sec" % (diff)
-                            if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d (next: %03d, took %f sec)\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
+                            #if self.debug_stderr: sys.stderr.write("[%.6f] ==> Got ACK %03d (next: %03d, took %f sec)\n" % (time.time(), rx_ack, self.pkt_cnt_arq, diff))
                         else:
                             if ((rx_ack + 1) % 256) != self.expected_arq_id:
                                 print "Received out-of-sequence ACK: %03d (expected: %03d)" % (rx_ack, self.expected_arq_id)
-                            if self.debug_stderr: sys.stderr.write("[%.6f] ==> OoS ACK %03d (expected: %03d)\n" % (time.time(), rx_ack, self.expected_arq_id))
+                            #if self.debug_stderr: sys.stderr.write("[%.6f] ==> OoS ACK %03d (expected: %03d)\n" % (time.time(), rx_ack, self.expected_arq_id))
                     else:
                         print "ARQ protocol packet too short"
                 
@@ -493,18 +494,21 @@ class simple_mac(gr.basic_block):
                     self.arq_pkts_txed += 1
                     self.retries = 0
                     self.next_random_backoff_percentage = self.backoff_randomness * random.random()
+                    backedoff_timeout = self.timeout
         else: # if channel is busy, lets check to see if its time to re-transmit
-            if self.exp_backoff:
-                backedoff_timeout = self.timeout * (2**self.retries)
-            else:
-                backedoff_timeout = self.timeout * (self.retries + 1)
-            backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
+            #if self.exp_backoff:
+            #    backedoff_timeout = self.timeout * (2**self.retries)
+            #else:
+            #    backedoff_timeout = self.timeout * (self.retries + 1)
+            #    #backedoff_timeout = self.timeout * (self.retries + 1)
+            #backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
+            backedoff_timeout = (2 * backedoff_timeout) + (random.random() * self.backoff_randomness)
             if (time.time() - self.time_of_tx) > backedoff_timeout: # check for ack timeout
                 #data = self.arq_pdu_tuple[0]
                 dest = self.arq_pdu_tuple[1]['EM_DEST_ADDR']
                 if self.retries == self.max_attempts:            # know when to quit
                     print "[Addr: %03d ID: %03d] ARQ failed after %d attempts" % (dest, self.expected_arq_id, self.retries)
-                    if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ failed after %d attempts\n" % (time.time(), self.expected_arq_id, self.retries))
+                    #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ failed after %d attempts\n" % (time.time(), self.expected_arq_id, self.retries))
                     self.retries = 0
                     self.arq_channel_state = ARQ_CHANNEL_IDLE
                     self.failed_arq += 1
@@ -526,7 +530,7 @@ class simple_mac(gr.basic_block):
                     sys.stderr.write(".")
                     sys.stderr.flush()
                     self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
-                    if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
+                    #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
                     self.time_of_tx = time_now
 		    self.backoff_tx = backedoff_timeout
                     self.next_random_backoff_percentage = self.backoff_randomness * random.random()
