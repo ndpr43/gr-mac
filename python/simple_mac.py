@@ -529,11 +529,12 @@ class simple_mac(gr.basic_block):
           
                 else:
                     self.retries += 1
-                    time_now = time.time()
+                    #time_now = time.time()
                     #print "[Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d" % (dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries)
                     sys.stderr.write(".")
                     sys.stderr.flush()
                     self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
+                    time_now = time.time()
                     #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
                     self.time_of_tx = time_now
 		    self.backoff_tx = backedoff_timeout
