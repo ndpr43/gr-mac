@@ -504,7 +504,7 @@ class simple_mac(gr.basic_block):
             #    #backedoff_timeout = self.timeout * (self.retries + 1)
             #backedoff_timeout *= (1.0 + self.next_random_backoff_percentage)
 
-            backedoff_timeout =  self.timeout + (random.random() * (self.backoff_randomness - len(self.nodes)) * self.timeout)
+            backedoff_timeout =  self.timeout + max(0,(random.random() * (self.backoff_randomness - len(self.nodes) - self.retries)) * self.timeout) 
 
             if (time.time() - self.time_of_tx) > backedoff_timeout: # check for ack timeout
                 #data = self.arq_pdu_tuple[0]
