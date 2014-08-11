@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<block>
+  <name>Carrier Sense</name>
+  <key>mac_carrier_sense</key>
+  <category>gr-mac</category>
+  <import>import mac</import>
+  <make>mac.carrier_sense($window, $shift, $threshold, $verbose)</make>
+  
+  <param>
+    <name>Averagin window size</name>
+    <key>window</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Shift</name>
+    <key>shift</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Detection Threshold</name>
+    <key>threshold</key>
+    <type>float</type>
+  </param>
+	<param>
+	  <name>Verbose</name>
+		<key>verbose</key>
+    <type>enum</type>
+    <option>
+      <name>True</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>False</name>
+			<key>False</key>
+		</option>
+	</param>
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  
+</block>
