@@ -22,7 +22,7 @@
 #  
 #  
 
-cs = 0 # carrier sense flag
+cs = 1 # carrier sense flag
 
 CHAN_FLAG_NONE  = 0x00
 CHAN_FLAG_ID    = 0x01
