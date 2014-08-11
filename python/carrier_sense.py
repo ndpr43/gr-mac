@@ -23,46 +23,40 @@ import cmath
 import numpy
 import constants
 from gnuradio import gr
-#from constants import *
-#        gr.sync_block.__init__(self,
-#class carrier_sense(gr.sync_block):
-#in_sig=[gr.io_signature(1, 1, gr.sizeof_gr_complex)],
+
 class carrier_sense(gr.sync_block):
     """
     docstring for block carrier_sense
     """
-    def __init__(self, window, shift, threshold, verbose):
-		gr.sync_block.__init__(self,
-			name="carrier_sense",
-            in_sig=[numpy.complex64],
-			out_sig=None)
+    def __init__(self, window, shift, threshold, alpha):
+        gr.sync_block.__init__(self,
+            name="carrier_sense",
+            in_sig=[numpy.float32],
+            out_sig=None)
             
-		self.window = int(window)
-		self.shift = shift
-		self.threshold = threshold
-		self.verbose = verbose
-		self.buf = []
+        self.window = int(window)
+        self.shift = shift
+        self.threshold = threshold
+        self.alpha = alpha
+	self.summ = 0.0
+	self.accum = 0
 
 
     def work(self, input_items, output_items):
-    	mean = 0.0
         in0 = input_items[0]
-        for m in xrange(len(in0)-self.window):
-        	for n in xrange(self.window):
-        		mean += abs(in0[n+m])
-        mean = mean/self.window
-        if mean > self.threshold:
-        	constants.cs = 1
-        else:
-        	constants.cs = 0
-        if self.verbose:
-            print "CS value"
-            print constants.cs
-	    print "Mean"
-            print mean
-            print "---------"
-        	
-        
-        
-        return len(input_items[0])
+	#print in0[0]
+	#print "----------"
+	mean = sum(in0)
+	self.accum += len(in0)
+	#for x in xrange(self.window):
+	#    self.summ = self.alpha * abs(in0[x]) + (self.summ * (1 - self.alpha))
+	
+	#constants.cs = 1 if self.summ > self.threshold else 0
+	if self.accum > self.window:
+	    constants.cs = 1 if mean > self.threshold else 0
+	    self.accum = 0
+	    mean = 0
+	
+
+        return max(len(in0), self.window)
 

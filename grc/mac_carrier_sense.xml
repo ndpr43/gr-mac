@@ -4,7 +4,7 @@
   <key>mac_carrier_sense</key>
   <category>gr-mac</category>
   <import>import mac</import>
-  <make>mac.carrier_sense($window, $shift, $threshold, $verbose)</make>
+  <make>mac.carrier_sense($window, $shift, $threshold, $alpha)</make>
   
   <param>
     <name>Averagin window size</name>
@@ -21,22 +21,14 @@
     <key>threshold</key>
     <type>float</type>
   </param>
-	<param>
-	  <name>Verbose</name>
-		<key>verbose</key>
-    <type>enum</type>
-    <option>
-      <name>True</name>
-			<key>True</key>
-		</option>
-		<option>
-			<name>False</name>
-			<key>False</key>
-		</option>
-	</param>
+  <param>
+    <name>Alpha</name>
+    <key>alpha</key>
+    <type>float</type>
+  </param>
   <sink>
     <name>in</name>
-    <type>complex</type>
+    <type>float</type>
   </sink>
   
 </block>

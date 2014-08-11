@@ -8,6 +8,7 @@
 $addr,
 $timeout,
 $maximum_attempts,
+$cs_status,
 $broadcast_interval,
 $exp_backoff,
 $backoff_randomness,
@@ -16,6 +17,7 @@ expire_on_arq_failure=$expire_on_arq_failure,
 only_send_if_alive=$only_send_if_alive,
 prepend_dummy=$prepend_dummy,
 )</make>
+<callback>set_cs_status($cs_status)</callback>
 
     <param>
         <name>Local addr</name>
@@ -33,6 +35,11 @@ prepend_dummy=$prepend_dummy,
         <key>timeout</key>
 		<value>0.01</value>
         <type>real</type>
+    </param>
+    <param>
+       <name>Carrier Sense</name>
+       <key>cs_status</key>
+       <type>float</type>
     </param>
 	<param>
         <name>Broadcast interval</name>
