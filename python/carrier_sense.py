@@ -51,15 +51,16 @@ class carrier_sense(gr.sync_block):
         	for n in xrange(self.window):
         		mean += abs(in0[n+m])
         mean = mean/self.window
-        print mean
         if mean > self.threshold:
         	constants.cs = 1
         else:
         	constants.cs = 0
-        print "CS value"
-        print constants.cs
-         
-        print "---------"
+        if self.verbose:
+            print "CS value"
+            print constants.cs
+	    print "Mean"
+            print mean
+            print "---------"
         	
         
         

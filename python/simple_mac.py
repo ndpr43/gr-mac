@@ -27,6 +27,7 @@ import Queue
 import numpy
 from gnuradio import gr
 import pmt
+import constants
 from gnuradio.digital import packet_utils
 import gnuradio.digital as gr_digital
 
@@ -491,25 +492,28 @@ class simple_mac(gr.basic_block):
         if self.arq_channel_state == ARQ_CHANNEL_IDLE: #channel ready for next arq msg
             if not self.queue.empty(): #we have an arq msg to send, so lets send it
                 #print self.queue.qsize()
-                if time.time() > self.newTx_timer:
-                    self.arq_pdu_tuple = self.queue.get()                # get msg
-                    self.expected_arq_id = self.pkt_cnt_arq              # store it for re-use
-                    self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID) # transmit the PDU tuple
-                    self.time_of_tx = time.time()                        # note time for arq timeout recognition
-		    self.ack_timer = self.time_of_tx + self.timeout      # set the ACK timeout for the new Transmission
-                    self.arq_channel_state = ARQ_CHANNEL_BUSY            # remember that the channel is busy
-                    self.arq_pkts_txed += 1
-                    self.retries = 0
-                    backedoff_timeout = self.timeout
+		if constants.cs == 0:
+                    if time.time() > self.newTx_timer:
+                        self.arq_pdu_tuple = self.queue.get()                # get msg
+                        self.expected_arq_id = self.pkt_cnt_arq              # store it for re-use
+                        self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID) # transmit the PDU tuple
+                        self.time_of_tx = time.time()                        # note time for arq timeout recognition
+		        self.ack_timer = self.time_of_tx + self.timeout      # set the ACK timeout for the new Transmission
+                        self.arq_channel_state = ARQ_CHANNEL_BUSY            # remember that the channel is busy
+                        self.arq_pkts_txed += 1
+                        self.retries = 0
+			self.reTx_timer = (random.randint(1, self.backoff_randomness) + 1) * self.timeout
+	        else:
+		    self.newTx_timer += (self.packet_duration + self.timeout)
         else: # if channel is busy, lets check to see if its time to wait of ACK or to initiate re-transmission
 	    if time.time() > self.ack_timer:
                print "Waiting of ACK timeout"
 	    else:
-	        # Select randomly an integer between 1 and retry times backoff window.
-	        # Add 1 to the sum. ( time.time() > (self.time_tx + self.timeout + ( reTx_timer ) * self.timeout)
-	        #                                                  |<-- ACK --->|  |<---------- reTx ---------->| 
-	        # Simplifying =>    ( time.time() - self.time_tx > (self.timeout * ( 1 + reTx_timer)))
-	        self.reTx_timer = (random.randint(1, self.backoff_randomness * self.retries) + 1) * self.timeout
+	        ## Select randomly an integer between 1 and retry times backoff window.
+	        ## Add 1 to the sum. ( time.time() > (self.time_tx + self.timeout + ( reTx_timer ) * self.timeout)
+	        ##                                                  |<-- ACK --->|  |<---------- reTx ---------->| 
+	        ## Simplifying =>    ( time.time() - self.time_tx > (self.timeout * ( 1 + reTx_timer)))
+	        #self.reTx_timer = (random.randint(1, self.backoff_randomness * self.retries) + 1) * self.timeout
 
                 if (time.time() - self.time_of_tx) > self.reTx_timer: # check for ack timeout
                     #data = self.arq_pdu_tuple[0]
@@ -536,9 +540,13 @@ class simple_mac(gr.basic_block):
                         #print "[Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d" % (dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries)
                         sys.stderr.write(".")
                         sys.stderr.flush()
-                        self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
-                        time_now = time.time()
-	                self.ack_timer = time_now + self.timeout
-                        #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
-                        self.time_of_tx = time_now
-                        self.arq_retxed += 1
+			if constants.cs == 0:
+                            self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
+	                    self.reTx_timer = (random.randint(1, self.backoff_randomness * self.retries) + 1) * self.timeout
+                            time_now = time.time()
+	                    self.ack_timer = time_now + self.timeout
+                            #if self.debug_stderr: sys.stderr.write("[%.6f] ==> [Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d\n" % (time.time(), dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries))
+                            self.time_of_tx = time_now
+                            self.arq_retxed += 1
+			else:
+			    self.reTx_timer += (self.packet_duration + self.timeout)
