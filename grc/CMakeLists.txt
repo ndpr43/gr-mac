@@ -26,6 +26,8 @@ install(FILES
 	mac_packet_to_pdu.xml
 	mac_802_3_tracker.xml
 	mac_burst_tagger.xml
-    mac_carrier_sense.xml DESTINATION share/gnuradio/grc/blocks
+    mac_carrier_sense.xml
+    mac_rt_probe.xml
+    mac_rt_probe2.xml DESTINATION share/gnuradio/grc/blocks
 )
 
