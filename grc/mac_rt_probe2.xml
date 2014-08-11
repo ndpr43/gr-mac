@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<block>
+  <name>rt_probe2</name>
+  <key>mac_rt_probe2</key>
+  <category>mac</category>
+  <import>import mac</import>
+  <make>mac.rt_probe2($probe_value)</make>
+  <callback>set_probe_value($probe_value)</callback>
+  <param>
+    <name>probe_value</name>
+    <key>probe_value</key>
+    <type>float</type>
+  </param>
+  <source>
+    <name>out</name>
+    <type>float</type>
+  </source>
+</block>
