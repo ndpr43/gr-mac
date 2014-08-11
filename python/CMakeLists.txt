@@ -38,7 +38,7 @@ GR_PYTHON_INSTALL(
     tracker_802_3.py
     simple_mac.py
     constants.py
-    DESTINATION ${GR_PYTHON_DIR}/mac
+    carrier_sense.py DESTINATION ${GR_PYTHON_DIR}/mac
 )
 
 ########################################################################
