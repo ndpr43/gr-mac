@@ -495,7 +495,7 @@ class simple_mac(gr.basic_block):
         if self.arq_channel_state == ARQ_CHANNEL_IDLE: #channel ready for next arq msg
             if not self.queue.empty(): #we have an arq msg to send, so lets send it
                 #print self.queue.qsize()
-		if d_cs_status == 0:
+		if self.d_cs_status == 0.0:
                     if time.time() > self.newTx_timer:
                         self.arq_pdu_tuple = self.queue.get()                # get msg
                         self.expected_arq_id = self.pkt_cnt_arq              # store it for re-use
@@ -543,7 +543,7 @@ class simple_mac(gr.basic_block):
                         #print "[Addr: %03d ID: %03d] ARQ timed out after %.3f s - retry #%d" % (dest, self.expected_arq_id, (time_now - self.time_of_tx), self.retries)
                         sys.stderr.write(".")
                         sys.stderr.flush()
-			if d_cs_status == 0:
+			if self.d_cs_status == 0:
                             self.tx_arq(self.arq_pdu_tuple, USER_IO_PROTOCOL_ID)
 	                    self.reTx_timer = (random.randint(1, self.backoff_randomness * self.retries) + 1) * self.timeout
                             time_now = time.time()
